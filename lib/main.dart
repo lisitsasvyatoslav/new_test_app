@@ -124,7 +124,7 @@ f_bool: ${response.fBool}
                     const SizedBox(width: 8),
                     Text(
                       _isInitialized
-                          ? 'Connected to grpcb.in:9001'
+                          ? 'Connected to grpcb.in:9000 (TLS)'
                           : 'Connecting...',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
@@ -241,7 +241,7 @@ f_bool: ${response.fBool}
             // Info section
             const SizedBox(height: 16),
             Text(
-              'Service: GRPCBin.DummyUnary\nEndpoint: grpcb.in:9001 (insecure)',
+              'Service: GRPCBin.DummyUnary',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
