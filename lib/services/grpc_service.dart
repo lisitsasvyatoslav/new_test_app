@@ -3,7 +3,7 @@ import '../generated/grpcbin.pbgrpc.dart';
 
 class GrpcService {
   static const String _host = 'grpcb.in';
-  static const int _port = 9000; // TLS port for grpcb.in (9001 is insecure)
+  static const int _port = 9000; // Port 9000 = insecure, Port 9001 = TLS
 
   ClientChannel? _channel;
   GRPCBinClient? _client;
@@ -14,7 +14,7 @@ class GrpcService {
       _host,
       port: _port,
       options: const ChannelOptions(
-        credentials: ChannelCredentials.secure(),
+        credentials: ChannelCredentials.insecure(),
       ),
     );
     _client = GRPCBinClient(_channel!);

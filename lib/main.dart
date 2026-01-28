@@ -124,7 +124,7 @@ f_bool: ${response.fBool}
                     const SizedBox(width: 8),
                     Text(
                       _isInitialized
-                          ? 'Connected to grpcb.in:9000 (TLS)'
+                          ? 'Connected to grpcb.in:9000 (insecure)'
                           : 'Connecting...',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
