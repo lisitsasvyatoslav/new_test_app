@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'services/grpc_service.dart';
+
+import 'generated/documents.pb.dart';
+import 'generated/documents_api.pb.dart';
+import 'services/documents_grpc_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,32 +14,28 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'gRPC Demo',
+      title: 'Documents gRPC',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const GrpcDemoPage(),
+      home: const DocumentsDemoPage(),
     );
   }
 }
 
-class GrpcDemoPage extends StatefulWidget {
-  const GrpcDemoPage({super.key});
+class DocumentsDemoPage extends StatefulWidget {
+  const DocumentsDemoPage({super.key});
 
   @override
-  State<GrpcDemoPage> createState() => _GrpcDemoPageState();
+  State<DocumentsDemoPage> createState() => _DocumentsDemoPageState();
 }
 
-class _GrpcDemoPageState extends State<GrpcDemoPage> {
-  final GrpcService _grpcService = GrpcService();
-  final TextEditingController _textController = TextEditingController();
-  final TextEditingController _numberController = TextEditingController(text: '42');
-
+class _DocumentsDemoPageState extends State<DocumentsDemoPage> {
+  final DocumentsGrpcService _service = DocumentsGrpcService();
   String _response = '';
   bool _isLoading = false;
   bool _isInitialized = false;
-  bool _boolValue = true;
   String? _error;
 
   @override
@@ -47,40 +46,23 @@ class _GrpcDemoPageState extends State<GrpcDemoPage> {
 
   Future<void> _initGrpc() async {
     try {
-      await _grpcService.init();
-      setState(() {
-        _isInitialized = true;
-      });
+      await _service.init();
+      setState(() => _isInitialized = true);
     } catch (e) {
-      setState(() {
-        _error = 'Failed to initialize gRPC: $e';
-      });
+      setState(() => _error = 'Ошибка инициализации: $e');
     }
   }
 
-  Future<void> _sendMessage() async {
-    if (_textController.text.isEmpty) return;
-
+  Future<void> _listDocuments() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final response = await _grpcService.sendDummyMessage(
-        text: _textController.text,
-        number: int.tryParse(_numberController.text) ?? 0,
-        flag: _boolValue,
-      );
-      
+      final res = await _service.listDocumentViews();
       setState(() {
-        _response = '''
-Received echo from server:
-
-f_string: "${response.fString}"
-f_int32: ${response.fInt32}
-f_bool: ${response.fBool}
-''';
+        _response = _formatListResponse(res);
         _isLoading = false;
       });
     } catch (e) {
@@ -91,11 +73,27 @@ f_bool: ${response.fBool}
     }
   }
 
+  String _formatListResponse(ListDocumentViewsResponse res) {
+    if (res.documents.isEmpty) {
+      return 'Документов: 0';
+    }
+    final buffer = StringBuffer('Документов: ${res.documents.length}\n\n');
+    for (final d in res.documents) {
+      buffer.writeln('id: ${d.id}, parent_id: ${d.parentId}');
+      buffer.writeln('  description: ${d.description}');
+      if (d.hasCreationTime()) {
+        buffer.writeln('  creation_time: ${d.creationTime.toDateTime()}');
+      }
+      if (d.hasType()) buffer.writeln('  type: ${d.type.name}');
+      if (d.hasStatus()) buffer.writeln('  status: ${d.status.name}');
+      buffer.writeln('');
+    }
+    return buffer.toString();
+  }
+
   @override
   void dispose() {
-    _grpcService.dispose();
-    _textController.dispose();
-    _numberController.dispose();
+    _service.dispose();
     super.dispose();
   }
 
@@ -104,14 +102,13 @@ f_bool: ${response.fBool}
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('gRPC Demo - grpcb.in'),
+        title: const Text('Documents API - test-edox-grpc.finam.ru'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Connection status
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -124,8 +121,8 @@ f_bool: ${response.fBool}
                     const SizedBox(width: 8),
                     Text(
                       _isInitialized
-                          ? 'Connected to grpcb.in:9000 (insecure)'
-                          : 'Connecting...',
+                          ? 'Подключено к test-edox-grpc.finam.ru:443 (TLS)'
+                          : 'Подключение...',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ],
@@ -133,79 +130,24 @@ f_bool: ${response.fBool}
               ),
             ),
             const SizedBox(height: 16),
-
-            // Text input
-            TextField(
-              controller: _textController,
-              decoration: const InputDecoration(
-                labelText: 'Text message (f_string)',
-                hintText: 'Hello, gRPC!',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.message),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Number input and bool toggle
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _numberController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Number (f_int32)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.numbers),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: Row(
-                      children: [
-                        const Text('f_bool:'),
-                        Switch(
-                          value: _boolValue,
-                          onChanged: (v) => setState(() => _boolValue = v),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Send button
             ElevatedButton.icon(
-              onPressed: _isInitialized && !_isLoading ? _sendMessage : null,
+              onPressed: _isInitialized && !_isLoading ? _listDocuments : null,
               icon: _isLoading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.send),
-              label: Text(_isLoading ? 'Sending...' : 'Send gRPC Request'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
+                  : const Icon(Icons.list),
+              label: Text(_isLoading ? 'Загрузка...' : 'Список документов'),
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
             ),
-            const SizedBox(height: 24),
-
-            // Response section
+            const SizedBox(height: 16),
             const Text(
-              'Response:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              'Ответ:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-
             Expanded(
               child: Card(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -221,7 +163,7 @@ f_bool: ${response.fBool}
                           )
                         : Text(
                             _response.isEmpty
-                                ? 'No response yet.\n\nThis demo uses grpcb.in DummyUnary endpoint.\nIt echoes back the message you send.'
+                                ? 'Нажмите «Список документов» для запроса ListDocumentViews.'
                                 : _response,
                             style: TextStyle(
                               fontFamily: 'monospace',
@@ -237,11 +179,9 @@ f_bool: ${response.fBool}
                 ),
               ),
             ),
-
-            // Info section
             const SizedBox(height: 16),
             Text(
-              'Service: GRPCBin.DummyUnary',
+              'Сервис: grpc.edox.documents.DocumentsService',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withAlpha(153),

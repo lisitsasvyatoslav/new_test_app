@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package proto.edox.documents;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Edox.Grpc.Documents";
+option objc_class_prefix = "Edox";
+
+enum DocumentType {
+    option deprecated = true;
+    DOCUMENT_TYPE_UNKNOWN = 0;
+    IDENTITY_DOCUMENT = 1;
+}
+
+enum Firm {
+    FIRM_UNKNOWN = 0;
+    FINAM = 1;
+    FINAM_MANAGEMENT = 2;
+    FINAM_BANK = 4;
+    FINAM_FOREX = 14;
+}
+
+message FileContent {
+    bytes content = 1;
+    FileInfo file = 2;
+}
+
+enum SignTypeId {
+    SIGN_TYPE_ID_UNKNOWN = 0;
+    ANALOG = 1;
+    ASP = 2;
+    ELECTRONIC = 3;
+}
+
+message DocumentValueType {
+    uint32 id = 1;
+    string code = 2;
+    string name = 3;
+}
+
+message DocumentStatus {
+    uint32 id = 1;
+    string name =  2;
+}
+
+message FileInfo {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message ProductInfo {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message DocumentView {
+    uint32 id = 1;
+    uint32 parent_id = 2;
+    string description = 3;
+    DocumentValueType type = 4;
+    google.protobuf.Timestamp creation_time = 5;
+    FileInfo file = 6;
+    ProductInfo product = 7;
+    DocumentStatus status = 8;
+    repeated proto.edox.documents.SignTypeId sign_type_ids = 9;
+}

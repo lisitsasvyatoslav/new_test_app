@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package grpc.edox.documents;
+
+import "documents.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "Edox.Grpc.Documents";
+option objc_class_prefix = "Edox";
+
+message CreateDocumentRequest {
+    string login = 1 [deprecated = true];
+    proto.edox.documents.DocumentType type = 2 [deprecated = true];
+    string description = 3;
+    repeated proto.edox.documents.FileContent files = 4;
+    map<string, string> fields = 5;
+    int64 authentication_id = 6 [deprecated = true];
+    proto.edox.documents.Firm firm = 7;
+    google.protobuf.UInt32Value parent_id = 8;
+    string global_id = 9;
+    int32 type_id = 10 [deprecated = true]; 
+    string type_code = 11;
+}
+
+message CreateDocumentResponse {
+    uint32 document_id = 1;
+}
+
+enum DocumentContent {
+    ALL = 0;
+    CHILD_DOCS = 1;
+    FILES = 2;
+    PRODUCTS = 4;
+}
+
+message ListDocumentViewsRequest {
+    string user_id = 1 [deprecated = true];
+    google.protobuf.Timestamp from = 2;
+    google.protobuf.Timestamp to = 3;
+    uint32 type = 4;
+    uint32 parent_id = 5;
+    DocumentContent content = 6;
+    repeated uint32 document_ids = 7;
+    uint32 status_id = 8;
+    int64 authentication_id = 9 [deprecated = true];
+}
+
+message ListDocumentViewsResponse {
+    repeated proto.edox.documents.DocumentView documents = 1;
+}
+
+// Сервис для работы с документами
+service DocumentsService {
+  // Создать новый документ
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+  
+  // Получить список документов
+  rpc ListDocumentViews(ListDocumentViewsRequest) returns (ListDocumentViewsResponse);
+}
