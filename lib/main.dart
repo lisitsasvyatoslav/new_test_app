@@ -60,7 +60,15 @@ class _DocumentsDemoPageState extends State<DocumentsDemoPage> {
     });
 
     try {
-      final res = await _service.listDocumentViews();
+      final res = await _service.listDocumentViews(
+        userId: '7FC98ECB-495E-485E-A22A-43CCFB2CCED6',
+        documentIds: [104357431],
+        type: 0,
+        parentId: 0,
+        content: DocumentContent.ALL,
+        statusId: 0,
+        authenticationId: 0,
+      );
       setState(() {
         _response = _formatListResponse(res);
         _isLoading = false;

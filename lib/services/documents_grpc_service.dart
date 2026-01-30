@@ -1,3 +1,4 @@
+import 'package:fixnum/fixnum.dart' as $fixnum;
 import 'package:grpc/grpc.dart';
 import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart' as $ts;
 import 'package:protobuf/well_known_types/google/protobuf/wrappers.pb.dart';
@@ -7,7 +8,7 @@ import '../generated/documents.pb.dart';
 
 /// Перед использованием вызовите [init()]. После — [dispose()].
 class DocumentsGrpcService {
-  static const String _host = '';
+  static const String _host = 'test-edox-grpc.finam.ru';
   static const int _port = 443;
 
   ClientChannel? _channel;
@@ -24,8 +25,10 @@ class DocumentsGrpcService {
     _client = DocumentsServiceClient(_channel!);
   }
 
-  /// Список документов. Параметры опциональны для упрощения вызова.
+  /// Список документов (grpc.edox.documents.ListDocumentViewsRequest).
+  /// Все параметры соответствуют полям API; deprecated-поля опциональны.
   Future<ListDocumentViewsResponse> listDocumentViews({
+    String? userId,
     DateTime? from,
     DateTime? to,
     int type = 0,
@@ -33,6 +36,7 @@ class DocumentsGrpcService {
     DocumentContent content = DocumentContent.ALL,
     List<int> documentIds = const [],
     int statusId = 0,
+    int? authenticationId,
   }) async {
     if (_client == null) {
       throw StateError('DocumentsGrpcService not initialized. Call init() first.');
@@ -44,8 +48,12 @@ class DocumentsGrpcService {
       ..content = content
       ..documentIds.addAll(documentIds)
       ..statusId = statusId;
+    if (userId != null && userId.isNotEmpty) request.userId = userId;
     if (from != null) request.from = $ts.Timestamp.fromDateTime(from);
     if (to != null) request.to = $ts.Timestamp.fromDateTime(to);
+    if (authenticationId != null) {
+      request.authenticationId = $fixnum.Int64(authenticationId);
+    }
 
     try {
       return await _client!.listDocumentViews(
@@ -53,7 +61,10 @@ class DocumentsGrpcService {
         options: CallOptions(timeout: const Duration(seconds: 15)),
       );
     } on GrpcError catch (e) {
-      throw Exception('gRPC Error: ${e.code} - ${e.message}');
+      // message может быть null — выводим code и details для отладки
+      final msg = e.message ?? '(no message)';
+      final details = e.details?.isNotEmpty == true ? ' | details: ${e.details}' : '';
+      throw Exception('gRPC Error: ${e.code} - $msg$details');
     } catch (e) {
       throw Exception('Error: $e');
     }
