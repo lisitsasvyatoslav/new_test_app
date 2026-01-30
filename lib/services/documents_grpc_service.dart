@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart' as $fixnum;
+import 'package:flutter/services.dart';
 import 'package:grpc/grpc.dart';
 import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart' as $ts;
 import 'package:protobuf/well_known_types/google/protobuf/wrappers.pb.dart';
@@ -13,8 +14,10 @@ class DocumentsGrpcService {
 
   ClientChannel? _channel;
   DocumentsServiceClient? _client;
+  String _token = '';
 
   Future<void> init() async {
+    _token = (await rootBundle.loadString('token_assembled.txt')).trim();
     _channel = ClientChannel(
       _host,
       port: _port,
@@ -24,6 +27,11 @@ class DocumentsGrpcService {
     );
     _client = DocumentsServiceClient(_channel!);
   }
+
+  CallOptions get _callOptions => CallOptions(
+        timeout: const Duration(seconds: 15),
+        metadata: _token.isNotEmpty ? {'authorization': 'Bearer $_token'} : null,
+      );
 
   /// Список документов (grpc.edox.documents.ListDocumentViewsRequest).
   /// Все параметры соответствуют полям API; deprecated-поля опциональны.
@@ -58,13 +66,16 @@ class DocumentsGrpcService {
     try {
       return await _client!.listDocumentViews(
         request,
-        options: CallOptions(timeout: const Duration(seconds: 15)),
+        options: _callOptions,
       );
     } on GrpcError catch (e) {
-      // message может быть null — выводим code и details для отладки
+      // code 14 = UNAVAILABLE: сервис недоступен (часто из-за отсутствия auth или обрыва соединения)
       final msg = e.message ?? '(no message)';
       final details = e.details?.isNotEmpty == true ? ' | details: ${e.details}' : '';
-      throw Exception('gRPC Error: ${e.code} - $msg$details');
+      final codeName = e.code == StatusCode.unavailable
+          ? ' (UNAVAILABLE — проверьте авторизацию/токен в метаданных или доступность метода на сервере)'
+          : '';
+      throw Exception('gRPC Error: ${e.code}$codeName - $msg$details');
     } catch (e) {
       throw Exception('Error: $e');
     }
@@ -98,7 +109,7 @@ class DocumentsGrpcService {
     try {
       return await _client!.createDocument(
         request,
-        options: CallOptions(timeout: const Duration(seconds: 15)),
+        options: _callOptions,
       );
     } on GrpcError catch (e) {
       throw Exception('gRPC Error: ${e.code} - ${e.message}');
